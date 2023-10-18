@@ -23,8 +23,9 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         const database = client.db('Final_Project');
-        const productCollection = database.collection('products');
+        const productCollection = database.collection('Products');
         const usersCollection = database.collection('users');
+        const bookingCollection = database.collection('Bookings');
 
         // user get
         app.get('/products', async (req, res) => {
@@ -40,59 +41,120 @@ async function run() {
             const result = await usersCollection.insertOne(user);
             res.send(result)
         })
+        // GET USER FROM DATABASE
+        app.get('/users', async (req, res) => {
+            const query = {};
+            const users = await usersCollection.find(query).toArray();
+            //console.log(users);
+            res.send(users)
+        })
 
-        // way-1 POST PRODUCT DATA TO DATABASE 
-        app.post('/products', async (req, res) => {
-            const productData = req.body;
-            //console.log(product);
-
-            const photo = req.files.image.data;
-            const photoData = photo.toString('base64');
-            const photoBuffer = Buffer.from(photoData, 'base64');
-            //console.log(photoBuffer);
-
-            const product = {
-                ...productData,
-                image: photoBuffer
+        // MAKE ADMIN
+        app.put('/users/admin:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    role: 'admin'
+                }
             }
-            //console.log(product);
+            const result = await usersCollection.updateOne(filter, updatedDoc, options);
 
-            const result = await productCollection.insertOne(product);
+            res.send(result)
+        })
+
+        // REMOVE ADMIN
+        app.patch('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const updatedDoc = req.body;
+            console.log(updatedDoc, id);
+            const result = await usersCollection.updateOne({ _id: new ObjectId(id) }, { $set: updatedDoc });
+            // console.log(usersCollection)
             res.send(result)
         })
 
 
 
+        // way-1 POST PRODUCT DATA TO DATABASE 
+        // app.post('/products', async (req, res) => {
+        //     const productData = req.body;
+        //     //console.log(product);
 
+        //     const photo = req.files.image.data;
+        //     const photoData = photo.toString('base64');
+        //     const photoBuffer = Buffer.from(photoData, 'base64');
+        //     //console.log(photoBuffer);
 
+        //     const product = {
+        //         ...productData,
+        //         image: photoBuffer
+        //     }
+        //     //console.log(product);
 
-
-
-
-
-
-
-
-
-        // specific product for cart page
-        // app.get('/product/:productName', async (req, res) => {
-        //     console.log('specific user hit');
-        //     const name = req.params.productName;
-        //     //console.log(name);
-        //     const query = { name: name }
-        //     const product = await productCollection.findOne(query);
-        //     res.send(product)
-
-        // })
-
-        // order post
-        // app.post('/orders', async (req, res) => {
-        //     //console.log('order api hit');
-        //     const order = req.body;
-        //     const result = await orderCollection.insertOne(order);
+        //     const result = await productCollection.insertOne(product);
         //     res.send(result)
-        //     console.log(result);
         // })
+
+        // way-2 POST PRODUCT DATA TO DATABASE
+        app.post('/products', async (req, res) => {
+            const productData = req.body;
+            //console.log(productData);
+            const result = await productCollection.insertOne(productData);
+            res.send(result)
+        })
+
+        // specific CATEGORY DATA
+        app.get('/products/:category', async (req, res) => {
+            //console.log('specific user hit');
+            const category = req.params.category;
+            //console.log(category);
+            const query = { category: category }
+            //console.log(query);
+            const result = await productCollection.find(query).toArray();
+            //console.log(result);
+            res.send(result)
+        })
+
+        // specific CATEGORY DATA
+        app.get('/products/:name', async (req, res) => {
+            console.log('specific product hit');
+            const name = req.params.name;
+            console.log(name);
+            const query = { name: name }
+            const result = await productCollection.find(query).toArray();
+            res.send(result)
+        })
+
+        //CHECK ADMIN VIA EMAIL
+        app.get('/users/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email };
+            const user = await usersCollection.findOne(query);
+            res.send({ isAdmin: user?.role === "admin" })
+
+        })
+
+        //CHECK ADMIN VIA EMAIL
+        app.get('/users/:email', async (req, res) => {
+            const email = req.params.email;
+            console.log(email);
+            const query = { email };
+            const user = await usersCollection.findOne(query);
+
+            res.send({ isBuyer: user?.role === 'buyer' })
+
+        })
+
+        // POST BOOKINGS DATA TO DATABASE
+        app.post('/bookings', async (req, res) => {
+            const bookings = req.body;
+            //console.log(bookings);
+            const result = await bookingCollection.insertOne(bookings);
+            res.send(result)
+        })
+
+
 
     } finally {
         // Ensures that the client will close when you finish/error
