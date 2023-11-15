@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const fileUpload = require('express-fileupload');
+
 const port = 5000;
 
 //midleware
@@ -8,6 +9,7 @@ var cors = require('cors');
 app.use(cors());
 app.use(express.json());//req.body undifined solved
 app.use(fileUpload());
+const stripe = require('stripe')('sk_test_51OCHE2SI11d9OCz0WpIWZYF8f2pKZ4RELZqyDxKFscR7vOqY8PxerKGJDwRxtycw00lro4XUsdfDjZPKQwSxRvt500aK83SGrg');
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -138,7 +140,7 @@ async function run() {
         //CHECK ADMIN VIA EMAIL
         app.get('/users/:email', async (req, res) => {
             const email = req.params.email;
-            console.log(email);
+            //console.log(email);
             const query = { email };
             const user = await usersCollection.findOne(query);
 
@@ -153,6 +155,46 @@ async function run() {
             const result = await bookingCollection.insertOne(bookings);
             res.send(result)
         })
+        // Get single booking data for payment
+        app.get('/bookings', async (req, res) => {
+            const query = {};
+            const result = await bookingCollection.find(query).toArray();
+            res.send(result)
+        })
+
+        // Get single booking data for payment
+        app.get('/bookings/:id', async (req, res) => {
+            const id = req.params.id;
+            console.log(id);
+            const query = { _id: new ObjectId(id) };
+
+            const result = await bookingCollection.findOne(query);
+
+            res.send(result)
+
+        })
+
+        // Payment integration
+        app.post("/create-payment-intent", async (req, res) => {
+            const order = req.body;
+            console.log(order.productPrice);
+            const price = parseFloat(order.productPrice);
+            console.log(price);
+            const ammount = price * 100;
+            console.log(ammount);
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: ammount,
+                currency: "usd",
+                payment_method_types: [
+                    "card"
+                ],
+
+            });
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
+        })
+
 
 
 
